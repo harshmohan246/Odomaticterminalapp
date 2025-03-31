@@ -5,6 +5,8 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothSocket;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -72,7 +74,22 @@ public class SendCommandActivity extends AppCompatActivity {
             String cmd = etCommand.getText().toString().trim();
             sendOBDCommand(cmd);
             etCommand.setText("");
+            etCommand.requestFocus();
+            etCommand.setSelection(etCommand.getText().length());
         });
+//        tvResponse.setOnLongClickListener(view -> {
+//            // Copy entire text
+//            ClipboardManager clipboard =
+//                    (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+//            ClipData clip = ClipData.newPlainText(
+//                    "OBD Response", tvResponse.getText().toString()
+//            );
+//            clipboard.setPrimaryClip(clip);
+//            Toast.makeText(this, "Copied entire OBD response!", Toast.LENGTH_SHORT).show();
+//
+//            return false;
+//        });
+
     }
 
     private void connectToDevice(String address) {
@@ -161,15 +178,13 @@ public class SendCommandActivity extends AppCompatActivity {
                             runOnUiThread(() -> {
                                 msgTemp = msgTemp.replaceAll("\\r", "\n");
                                 tvResponse.append(msgTemp);
+                                msgTemp = "";
                                 findViewById(R.id.scrollViewResponse).post(() -> {
                                     ((android.widget.ScrollView) findViewById(R.id.scrollViewResponse))
                                             .fullScroll(android.view.View.FOCUS_DOWN);
                                 });
-                                msgTemp = "";
                             });
                         }
-                        etCommand.requestFocus();
-                        etCommand.setSelection(etCommand.getText().length());
                     }
                 } catch (IOException e) {
                     Log.e(TAG, "Reading error, attempting reconnection", e);
