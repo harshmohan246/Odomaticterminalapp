@@ -70,10 +70,7 @@ public class SendCommandActivity extends AppCompatActivity {
 
         btnSendCmd.setOnClickListener(view -> {
             String cmd = etCommand.getText().toString().trim();
-            if (!cmd.isEmpty()) {
-                // ELM327 typically wants commands ending with \r
-                sendOBDCommand(cmd);
-            }
+            sendOBDCommand(cmd);
             etCommand.setText("");
         });
     }
@@ -160,10 +157,19 @@ public class SendCommandActivity extends AppCompatActivity {
                     if (inStream != null && (bytes = inStream.read(buffer)) > 0) {
                         final String msg = new String(buffer, 0, bytes);
                         msgTemp += msg;
-                        if (msg.contains(">")) {
-                            receivedMessage = msgTemp;
-                            msgTemp = "";
+                        if (msg.contains("\r")) {
+                            runOnUiThread(() -> {
+                                msgTemp = msgTemp.replaceAll("\\r", "\n");
+                                tvResponse.append(msgTemp);
+                                findViewById(R.id.scrollViewResponse).post(() -> {
+                                    ((android.widget.ScrollView) findViewById(R.id.scrollViewResponse))
+                                            .fullScroll(android.view.View.FOCUS_DOWN);
+                                });
+                                msgTemp = "";
+                            });
                         }
+                        etCommand.requestFocus();
+                        etCommand.setSelection(etCommand.getText().length());
                     }
                 } catch (IOException e) {
                     Log.e(TAG, "Reading error, attempting reconnection", e);
@@ -194,7 +200,6 @@ public class SendCommandActivity extends AppCompatActivity {
 
     private void sendOBDCommand(String command) {
         command += "\r";
-        receivedMessage = "";
         if (outStream != null) {
             try {
                 outStream.write(command.getBytes());
@@ -207,21 +212,7 @@ public class SendCommandActivity extends AppCompatActivity {
         } else {
             Toast.makeText(this, "Not connected!", Toast.LENGTH_SHORT).show();
         }
-        while (receivedMessage.isEmpty()) {
-            try {
-                Thread.sleep(100);
-            } catch (Exception ignored) {
-            }
-        }
-        runOnUiThread(() -> {
-            receivedMessage = receivedMessage.replaceAll("\\r", "\n");
-            tvResponse.append("\n" + receivedMessage);
-
-            findViewById(R.id.scrollViewResponse).post(() -> {
-                ((android.widget.ScrollView) findViewById(R.id.scrollViewResponse))
-                        .fullScroll(android.view.View.FOCUS_DOWN);
-            });
-        });
+        command = "";
     }
 
     @Override
